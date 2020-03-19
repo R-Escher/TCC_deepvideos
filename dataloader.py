@@ -6,6 +6,7 @@ import torch
 import random
 import cv2
 import skimage
+from skimage import io
 from scipy import ndimage, misc
 from torchvision import transforms, utils
 from torch.utils.data import Dataset, DataLoader

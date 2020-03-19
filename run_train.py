@@ -23,30 +23,33 @@ RUN_PATH = RESULTS_PATH+RUN_NAME+'/'
 SEED = 12
 BATCH_SIZE = 2
 MAX_SAMPLES = 300000
-DATA_PATH = '~/Documents/bdd_images/'
+DATA_PATH = '/home/albano/Documents/bdd_images/'
 TRAIN_FILE_PATH = DATA_PATH + 'bdd_day_train.csv'
 TEST_FILE_PATH = DATA_PATH + 'bdd_day_test.csv'
 EXPOSURE = 'over'
 WINDOW_SIZE = 3
 OFFSET = 3
 LOG_INTERVAL = 100  # sample unit
-TEST_INTERVAL = 1000  # sample unit
-CHECKPOINT_INTERVAL = 1000  # sample unit
-# MODEL_STATE_NAME = 150000
-# MODEL_STATE_PATH = '{}weights/{}_{}.pth'.format('results/fc_mix_3_3/', 'fc_mix_3_3', MODEL_STATE_NAME)
+TEST_INTERVAL = 100  # sample unit
+CHECKPOINT_INTERVAL = 100  # sample unit
+MODEL_STATE_NAME = 0 # 0 if this is the first train. Otherwise it will be asked below
+#MODEL_STATE_PATH = '{}weights/{}_{}.pth'.format('results/fc_mix_3_3/', 'fc_mix_3_3', MODEL_STATE_NAME)
 
 # Set host or device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 torch.cuda.empty_cache()
 
-#Create a fodler for results
+# Create a folder for results if doesn't exists
 try:
     os.mkdir(RUN_PATH)
     os.mkdir(RUN_PATH+'/test_images')
     os.mkdir(RUN_PATH+'/val_images')
     os.mkdir(RUN_PATH+'/weights')
 except:
-    sys.exit("Reset result folder: {}".format(RUN_PATH))
+    #if exists - will continue training
+    MODEL_STATE_NAME = eval(input("Insert the sample number it was when the program stopped, in order to continue training from checkpoint (0 if there aren't checkpoints): ")) # THIS NUMBER MUST BE UPDATED TO THE SAMPLE NUMBER IT WAS WHEN PROGRAM STOPPED
+    MODEL_STATE_PATH = '{}weights/{}_{}.pth'.format('results/prints_unet3d/', 'prints_unet3d', MODEL_STATE_NAME)
+    #sys.exit("Reset result folder: {}".format(RUN_PATH))
 
 # Log in file
 #sys.stdout = open('{}results.csv'.format(RUN_PATH), 'w')
@@ -56,6 +59,29 @@ torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 
+
+
+# Set model
+model = UNet3D.UNet3D(WINDOW_SIZE).to(device)
+#model = UNet.UNet(3, 3).to(device)
+# model = UNet2_5D.UNet3D(3,3).to(device)
+if ( MODEL_STATE_NAME > 0 ):
+    # if var is not 0, will continue training from last checkpoint
+    model.load_state_dict(torch.load(MODEL_STATE_PATH))
+else:
+    # else will train from start
+    pass
+
+# Set optimizer
+#optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
+optimizer = torch.optim.Adam(model.parameters())
+
+# Set criterion
+criterion = LossFunction().to(device)
+print("\nModel, optimizer and criterion set. ")
+
+
+print("\nSetting dataloaders. May take a while. ")
 # Set dataloaders
 train_dataset = BddDataset(TRAIN_FILE_PATH, DATA_PATH, EXPOSURE,
                            BATCH_SIZE, window_size=WINDOW_SIZE, offset=OFFSET)
@@ -64,27 +90,16 @@ train_loader = BddDataloader(train_dataset, BATCH_SIZE, num_workers=4)
 test_dataset = BddDataset(TEST_FILE_PATH, DATA_PATH, [0.16],
                           BATCH_SIZE, window_size=WINDOW_SIZE, validation=True, offset=OFFSET)
 test_loader = BddDataloader(test_dataset, BATCH_SIZE, num_workers=4, shuffle=False)
-
-# Set model
-model = UNet3D.UNet3D(WINDOW_SIZE).to(device)
-#model = UNet.UNet(3, 3).to(device)
-# model = UNet2_5D.UNet3D(3,3).to(device)
-# model.load_state_dict(torch.load(MODEL_STATE_PATH))
-
-# Set optimizer
-#optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
-optimizer = torch.optim.Adam(model.parameters())
-
-# Set criterion
-criterion = LossFunction().to(device)
+print("\nDataloaders set. \n Beginning training.")
 
 # Log model configurations
 # log.log_model_eval(model)
 # log.log_model_params(model)
 
-n_samples = 0#MODEL_STATE_NAME
 
-print('Batch;TotalLoss;AvgLoss;AvgSsim;AvgPsnr')
+n_samples = MODEL_STATE_NAME
+
+#print('Batch;TotalLoss;AvgLoss;AvgSsim;AvgPsnr')
 while n_samples < MAX_SAMPLES:
     #log.log_time('Epoch {}/{}'.format(epoch, EPOCHS - 1))
 
@@ -108,8 +123,7 @@ while n_samples < MAX_SAMPLES:
 
         # Log loss
         if n_samples % LOG_INTERVAL == 0:
-
-            print('{};{:.6f};{:.6f};;'
+            print('[LOG] Batch: {}; TotalLoss: {:.6f}; AvgLoss: {:.6f}; _; _;'
                   .format(n_samples, np.sum(train_loss), np.average(train_loss)))
             train_loss = []
 
@@ -140,7 +154,7 @@ while n_samples < MAX_SAMPLES:
                 #break
 
             # Logs after test
-            print('Test;{:.6f};{:.6f};{:.6f};{:.6f}'
+            print('[TEST] TotalLoss: {:.6f}; AvgLoss: {:.6f}; AvgSSIM: {:.6f}; AvgPSNR: {:.6f}'
                   .format(np.sum(test_loss), np.average(test_loss),
                           np.average([m[0] for m in test_metrics]), np.average([m[1] for m in test_metrics])))
                           #np.average(test_metrics[0]), np.average(test_metrics[1])))

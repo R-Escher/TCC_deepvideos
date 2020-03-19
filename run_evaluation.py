@@ -22,7 +22,7 @@ RESULTS_PATH = 'results/'
 RUN_PATH = 'results/'+RUN_NAME+'/'
 SEED = 12
 BATCH_SIZE = 2
-DATA_PATH = '~/Documents/bdd_images/'
+DATA_PATH = '/home/albano/Documents/bdd_images/'
 VAL_FILE_PATH = DATA_PATH + 'bdd_day_val.csv'
 DEGRADATION = 'over'
 EXPOSURE = [0.25]
@@ -42,11 +42,13 @@ torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 
+print("seeds set.\n")
+
 # Set dataloaders
 val_dataset = BddDataset(VAL_FILE_PATH, DATA_PATH, EXPOSURE,
                            BATCH_SIZE, window_size=WINDOW_SIZE, validation=True)
 val_loader = BddDataloader(val_dataset, BATCH_SIZE, num_workers=4, shuffle=False)
-
+print("dataloaders setted.\n")
 # Set model
 model = UNet3D.UNet3D(WINDOW_SIZE).to(device)
 #model = UNet.UNet(3, 3).to(device)
@@ -82,3 +84,4 @@ for _, sample in enumerate(val_loader):
         calc_psnr = psnr(gt, predict)
 
         print('{};{}'.format(calc_ssim, calc_psnr))
+print("\n\n Program ended \n\n")

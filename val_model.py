@@ -17,7 +17,7 @@ RESULTS_PATH = 'results/'
 RUN_PATH = 'results/'+RUN_NAME+'/'
 SEED = 12
 BATCH_SIZE = 1
-DATA_PATH = '~/Documents/bdd_images/'
+DATA_PATH = '/home/albano/Documents/bdd_images/'
 VAL_FILE_PATH = DATA_PATH + 'bdd_day_val.csv'
 DEGRADATION = 'over'
 EXPOSURE = [0.16]
@@ -30,13 +30,12 @@ SAVE_IMAGES_PATH = 'qualitative_results/3_over/'
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Set dataloaders
-# Set dataloaders
 val_dataset = BddDataset(VAL_FILE_PATH, DATA_PATH, EXPOSURE,
                            BATCH_SIZE, window_size=WINDOW_SIZE, validation=True)
 val_loader = BddDataloader(val_dataset, BATCH_SIZE, num_workers=4, shuffle=False)
 
 
-# Set model and lod weights
+# Set model and load weights
 model = UNet3D.UNet3D(WINDOW_SIZE).to(device)
 model.load_state_dict(torch.load(MODEL_STATE_PATH))
 
