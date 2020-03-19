@@ -10,7 +10,7 @@
 ### How to Evaluate:
 - Set up hyperparameters inside **"run_evaluation.py"** file.
 -- You must specify the correct name of the weight file (.pth) and its model state number.
-- Run ```**python run_evaluation.py**```
+- Run **```python run_evaluation.py```**
 - A **.csv** file will be generated inside the folder specified at variable RUN_PATH, containing the calculation of the PSNR and SSIM metrics of each sample.
 
 ### How to Test:
